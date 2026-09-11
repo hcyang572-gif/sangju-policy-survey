@@ -1,0 +1,136 @@
+/* ══════════════════════════════════════════════════════════════════════
+   의견조사 접수현황(팀 공유) — share.css                     🩵물결
+   ────────────────────────────────────────────────────────────────────
+   ⭐ 휴대전화 카카오톡 안에서 열립니다. 320px 폭이 «기본» 이고 넓은 화면이 덤입니다.
+      표를 쓰지 않고 «큰 숫자와 막대» 로만 읽히게 했습니다.
+   ⭐ 색·글자 토큰은 디자인_규격서.md 1~2절. 이 화면은 루트 style.css 를 부르지 않으므로
+      (카톡 인앱 브라우저에서 요청 하나라도 줄이려고) 토큰을 여기에 직접 둡니다.
+   ══════════════════════════════════════════════════════════════════════ */
+:root{
+  --cream:#FDF4EC; --surface:#FFFFFF; --ink:#33241C; --ink2:#6E5A4C;
+  --gotgam:#B84A1C; --gotgam-d:#93380F; --amber:#E8A33D;
+  --teal:#0E7C86; --teal-d:#0A5F68; --line:#EADCCE; --field:#A9846A;
+  --error:#A52714; --ok:#2E7D32;
+  --tint-teal:#CFE5E7; --tint-gotgam:#F1DBD2;
+  --shade:rgba(51,36,28,.08);
+  --fs-badge:11px; --fs-eyebrow:12px; --fs-caption:13px; --fs-body:15px;
+  --fs-section:16px; --fs-title:20px; --fs-kpi:24px; --fs-hero:28px;
+  --fw-normal:400; --fw-bold:700; --fw-heavy:800;
+  --font:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",system-ui,sans-serif;
+  --d0:#0E7C86; --d1:#B84A1C; --d2:#A03A62; --d3:#2F6B3A; --d4:#A9846A;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --cream:#1B1411; --surface:#261E19; --ink:#F6ECE3; --ink2:#C7B2A2;
+    --gotgam:#E8845A; --gotgam-d:#F0A184; --teal:#4FC3CD; --teal-d:#7FD8E0;
+    --line:#3C2F27; --field:#8A6B55; --error:#F08072; --ok:#7CC47F;
+    --tint-teal:#123C41; --tint-gotgam:#40241A; --shade:rgba(0,0,0,.35);
+    --d0:#4FC3CD; --d1:#E8845A; --d2:#D98BAD; --d3:#79C489; --d4:#C4A184;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--font);
+  font-size:var(--fs-body);line-height:1.65;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* ⭐ 좌우 여백은 «여기 한 곳» 에서만 준다 — 어느 폭에서도 16px 아래로 내려가지 않게 */
+.page{max-width:560px;margin:0 auto;padding-left:16px;padding-right:16px;padding-block:20px 32px}
+
+/* ── 머리 ─────────────────────────────────────────────────── */
+.eyebrow{margin:0;font-size:var(--fs-eyebrow);font-weight:var(--fw-heavy);
+  letter-spacing:.1em;color:var(--gotgam)}
+h1{margin:5px 0 0;font-size:var(--fs-hero);font-weight:var(--fw-heavy);
+  line-height:1.25;letter-spacing:-.01em}
+.period{margin:8px 0 0;font-size:var(--fs-caption);color:var(--ink2)}
+.refresh{margin:10px 0 0;display:inline-flex;align-items:center;gap:7px;
+  font-size:var(--fs-badge);font-weight:var(--fw-bold);color:var(--ink2);
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ink2);flex:0 0 auto}
+.dot.live{background:var(--ok);animation:pulse 1.8s infinite}
+.dot.bad{background:var(--error)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+
+/* ── 큰 숫자 ──────────────────────────────────────────────── */
+.hero{margin-top:18px;background:var(--surface);border:1px solid var(--line);
+  border-radius:16px;padding:20px 18px 18px;box-shadow:0 6px 20px var(--shade)}
+.hero-lab{margin:0;font-size:var(--fs-caption);font-weight:var(--fw-bold);color:var(--ink2)}
+.hero-n{margin:2px 0 0;display:flex;align-items:baseline;gap:6px}
+.hero-n strong{font-size:56px;line-height:1.05;font-weight:var(--fw-heavy);
+  color:var(--gotgam);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.hero-n .unit{font-size:var(--fs-title);font-weight:var(--fw-bold);color:var(--ink2)}
+.rail{height:10px;border-radius:5px;background:var(--line);margin-top:12px;overflow:hidden}
+.rail i{display:block;height:100%;border-radius:5px;background:var(--teal);width:0;
+  transition:width .7s ease}
+.hero-sub{margin:9px 0 0;display:flex;gap:8px;font-size:var(--fs-caption);color:var(--ink2)}
+.hero-sub b{margin-left:auto;color:var(--teal-d);font-weight:var(--fw-heavy);
+  font-variant-numeric:tabular-nums}
+
+/* ── 작은 숫자 셋 ─────────────────────────────────────────── */
+.tri{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tri .t{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:12px 10px;text-align:center;min-width:0}
+.tri span{display:block;font-size:var(--fs-badge);color:var(--ink2);font-weight:var(--fw-bold)}
+.tri strong{display:block;font-size:var(--fs-kpi);font-weight:var(--fw-heavy);line-height:1.25;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-top:2px;
+  overflow-wrap:anywhere}
+.tri small{display:block;font-size:var(--fs-badge);color:var(--ink2)}
+/* 320px — 세 칸이 눌리므로 글자를 한 단계 줄인다 */
+@media (max-width:359px){
+  .tri strong{font-size:19px}
+  .hero-n strong{font-size:48px}
+}
+
+/* ── 카드 ─────────────────────────────────────────────────── */
+.card{margin-top:12px;background:var(--surface);border:1px solid var(--line);
+  border-radius:16px;padding:16px 16px 15px}
+.card h2{margin:0 0 12px;font-size:var(--fs-section);font-weight:var(--fw-bold);
+  display:flex;align-items:baseline;gap:8px}
+.card h2 .of{margin-left:auto;font-size:var(--fs-badge);color:var(--ink2);font-weight:var(--fw-normal)}
+.hint{margin:12px 0 0;font-size:var(--fs-badge);color:var(--ink2);line-height:1.6}
+
+/* 기관별 막대 */
+.bars{display:grid;gap:11px}
+.bar b{display:block;font-size:var(--fs-caption);font-weight:var(--fw-bold);
+  overflow-wrap:anywhere}
+.bar em{font-style:normal;font-size:var(--fs-badge);color:var(--ink2);
+  font-variant-numeric:tabular-nums}
+.bar .track{height:10px;border-radius:5px;background:var(--line);margin-top:5px;
+  position:relative;overflow:hidden}
+.bar .track u{position:absolute;inset:0 auto 0 0;border-radius:5px;text-decoration:none;
+  width:0;transition:width .7s ease}
+.bar.b0 u{background:var(--d0)} .bar.b1 u{background:var(--d1)} .bar.b2 u{background:var(--d2)}
+.bar.b3 u{background:var(--d3)} .bar.b4 u{background:var(--d4)}
+/* ⚠ 3건 미만 — 수치도 막대 길이도 드러내지 않는다(빗금 고정폭) */
+.bar.masked em{color:var(--gotgam);font-weight:var(--fw-bold)}
+.bar.masked u{background:repeating-linear-gradient(135deg,var(--field) 0 5px,transparent 5px 10px)}
+
+/* 문항 평균 */
+.means{display:grid;gap:11px}
+.mean b{display:block;font-size:var(--fs-caption);font-weight:var(--fw-normal);
+  color:var(--ink2);line-height:1.45}
+.mean .v{font-style:normal;font-size:var(--fs-body);font-weight:var(--fw-heavy);
+  color:var(--teal-d);font-variant-numeric:tabular-nums;float:right;margin-left:8px}
+.mean .track{clear:both;height:8px;border-radius:4px;background:var(--line);
+  margin-top:5px;position:relative}
+.mean .track u{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--teal);
+  text-decoration:none;width:0;transition:width .7s ease}
+.mean .track s{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--field);
+  opacity:.45;text-decoration:none}
+
+/* ── 안내·바닥 ────────────────────────────────────────────── */
+.notice{margin-top:18px;background:var(--surface);border:1px solid var(--line);
+  border-radius:16px;padding:22px 18px;text-align:center}
+.notice b{display:block;font-size:var(--fs-section);font-weight:var(--fw-heavy)}
+.notice p{margin:8px 0 0;font-size:var(--fs-caption);color:var(--ink2);
+  line-height:1.7;white-space:pre-line}
+
+.foot{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.lock{margin:0;font-size:var(--fs-caption);font-weight:var(--fw-heavy);color:var(--ink)}
+.why{margin:8px 0 0;font-size:var(--fs-badge);color:var(--ink2);line-height:1.75}
+.who{margin:12px 0 0;font-size:var(--fs-badge);color:var(--ink2)}
+
+/* 평균 안내줄 — 「10건부터」·「최근 N건은 아직 평균에 반영되지 않았습니다」 */
+.note{margin:0 0 12px;font-size:var(--fs-badge);color:var(--ink2);line-height:1.6;
+  background:var(--tint-teal);color:var(--teal-d);border-radius:10px;padding:8px 11px}
+.dot.wait{background:var(--amber)}

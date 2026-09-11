@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<!-- ⭐ 확대 허용 — 전자정부 웹품질 지침·KWCAG 2.2. user-scalable=no 를 넣지 마십시오. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!-- ⛔ 검색엔진 노출 금지 — 이 화면은 양호창님 한 분만 보시는 곳입니다.
+     ⚠ noindex 는 «크롤러에 대한 부탁» 일 뿐이고, 실제 차단은 Supabase RLS 가 합니다
+       (로그인하지 않으면 응답이 한 줄도 오지 않습니다).
+     ⚠ 저장소 루트의 robots.txt 에 「Disallow: /현황/」 을 넣어야 합니다 — 🔵손길 담당입니다. -->
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+
+<!-- 내려받는 곳을 못 박습니다(sangju-policy-admin index.html 과 같은 결).
+       · cdn.jsdelivr.net             — supabase-js 라이브러리
+       · nalpuhtdruovzulcagtj.…       — 로그인(Auth) · 응답 조회 · 실시간(wss)
+     ⚠ style-src 에 'unsafe-inline' 을 넣지 않았으므로 인라인 style «속성» 을 쓸 수 없습니다.
+       막대 길이는 dashboard.js 가 el.style.width 로(= CSSOM, CSP 대상 아님) 넣습니다.
+     ⚠ Supabase 프로젝트 주소를 바꾸면 아래 connect-src 도 «함께» 바꿔야 합니다.
+       (config.js 만 고치고 여기를 놔두면 조용히 연결이 막힙니다) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; connect-src 'self' https://nalpuhtdruovzulcagtj.supabase.co wss://nalpuhtdruovzulcagtj.supabase.co">
+
+<title>의견조사 실시간 현황 · 상주시 정책플랫폼</title>
+
+<!-- ⭐ 순서가 중요합니다 — 루트 style.css 를 «먼저» 불러 :root 토큰을 물려받고,
+     현황 페이지 고유 스타일을 그 뒤에 얹습니다.
+     루트 파일이 아직 없어도(404) 화면은 멀쩡합니다 — dashboard.css 의
+     @layer sv-fallback 이 예비 토큰을 대신 댑니다(그 파일 머리말 참조). -->
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="dashboard.css?v=1">
+</head>
+<body>
+
+<!-- ═══ 로그인 ═════════════════════════════════════════════════════════
+     ⭐ anon 키로는 응답을 «한 줄도» 읽지 못합니다(RLS). 로그인이 먼저입니다.
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-mark" aria-hidden="true">곶</div>
+    <p class="gate-eyebrow">미래상주 희망연구팀 「톱니바퀴」</p>
+    <h1>의견조사 실시간 현황</h1>
+    <p class="gate-lead">관련부서 의견조사 결과를 보시는 화면입니다. 담당자 계정으로 로그인해 주십시오.</p>
+
+    <div class="gate-field">
+      <label for="email">이메일</label>
+      <input id="email" type="email" autocomplete="username" inputmode="email"
+             placeholder="hcyang572@korea.kr" enterkeyhint="next">
+    </div>
+    <div class="gate-field">
+      <label for="pw">비밀번호</label>
+      <input id="pw" type="password" autocomplete="current-password" enterkeyhint="go">
+    </div>
+
+    <button class="gate-btn" id="loginBtn" type="button">로그인</button>
+    <p class="gate-err" id="loginErr" role="alert" aria-live="assertive"></p>
+    <p class="gate-help">
+      이 화면은 검색에 노출되지 않으며, 로그인하지 않으면 응답이 한 줄도 보이지 않습니다.<br>
+      계정이 없으시면 Supabase 대시보드 → Authentication → Users 에서 만드실 수 있습니다.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 현황 (시안 ③ 실시간 현황 화면) ═══════════════════════════════ -->
+<main class="wrap dash" id="dash" hidden>
+
+  <div class="dash-hd">
+    <h3>의견조사 현황</h3>
+    <span class="live wait" id="liveTag"><i></i><span id="liveTxt">연결 중</span></span>
+    <div class="dash-tools">
+      <button class="tool" type="button" id="btnCsv">엑셀 내려받기</button>
+      <button class="tool" type="button" id="btnVoices" aria-haspopup="dialog">주관식 모아보기</button>
+      <button class="tool" type="button" id="btnLogout">로그아웃</button>
+    </div>
+    <p class="sub" id="dashSub">조사 기간을 불러오는 중…</p>
+  </div>
+
+  <div class="dash-body">
+
+    <!-- 실시간이 끊겼을 때만 나타나는 정직한 띠 -->
+    <div class="banner" id="rtBanner" hidden>
+      <span><b>실시간 연결이 끊겼습니다</b> — <span id="rtBannerMsg"></span></span>
+      <button class="tool" type="button" id="btnRetry">지금 다시 연결</button>
+    </div>
+
+    <!-- 표가 아직 없을 때 / 응답이 0건일 때 -->
+    <div class="notice" id="notice" hidden>
+      <b id="noticeT"></b>
+      <p id="noticeP"></p>
+    </div>
+
+    <div id="dashMain" hidden>
+      <div class="kpis">
+        <div class="kpi hot">
+          <span>총 응답</span><strong id="kTotal">0</strong><small id="kTotalSub">목표 54건(잠정)</small>
+          <div class="kpi-rail"><i id="kRail"></i></div>
+        </div>
+        <div class="kpi"><span>오늘 들어온 응답</span><strong id="kToday">0</strong><small id="kTodaySub">어제 0건</small></div>
+        <div class="kpi"><span>기관 참여율</span><strong id="kRate">0 / 4</strong><small id="kRateSub">응답한 기관</small></div>
+        <div class="kpi"><span>마지막 응답</span><strong id="kLast">—</strong><small id="kLastSub">아직 없습니다</small></div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-h"><h4>기관별 응답</h4><span id="dbarNote">총 0건</span></div>
+          <div class="dbar" id="dbar"></div>
+          <p class="privacy-note">
+            ⚠ 응답자 보호 — 모집단이 작아 (소속+담당업무+경력) 조합으로 한 사람이 특정될 수 있습니다.
+            그래서 <b>3건 미만인 칸은 「3건 미만」으로 뭉뚱그려</b> 보여 드립니다(막대 길이도 감춥니다).
+            읍·면·동은 한 곳에 사회복지 담당이 한두 명뿐이라 <b>어느 읍·면·동인지는 묻지도, 보여 드리지도 않고</b>
+            읍·면·동 전체를 한 덩어리로만 셉니다. 보고서·발표자료에 실으실 때도 이 원칙을 그대로 지켜 주십시오.<br>
+            ※ 대상 인원(사회복지과 12 · 노인장애인복지과 10 · 아이여성행복과 8 · 읍·면·동 24 = 54명)은
+            <b>잠정치</b>입니다. 확정되면 <code>현황/dashboard.js</code> 맨 위 <code>CFG</code> 한 곳만 고치시면 됩니다.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-h">
+            <h4>문항 평균</h4>
+            <button class="link" type="button" id="btnMeanAll" aria-pressed="false">11문항 모두 보기</button>
+            <span>5점 만점</span>
+          </div>
+          <div class="mean" id="mean"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h4>들어온 응답</h4>
+          <span id="feedNote">행을 누르시면 그 응답의 23문항 답이 모두 펼쳐집니다</span>
+        </div>
+        <div class="feed" id="feed"></div>
+      </div>
+    </div>
+
+    <p class="foot">
+      원자료는 고칠 수 없습니다(서버에서 UPDATE·DELETE 를 막아 두었습니다).
+      응답에는 성명·연락처·IP 가 들어 있지 않습니다.<br>
+      <button type="button" id="btnReload">지금 다시 불러오기</button>
+    </p>
+  </div>
+</main>
+
+<!-- 주관식 모아보기 -->
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetT">
+  <div class="sheet-in">
+    <div class="sheet-hd">
+      <h4 id="sheetT">주관식 모아보기</h4>
+      <span class="n" id="sheetN"></span>
+      <button class="tool" type="button" id="btnCopyVoices">전체 복사</button>
+      <button class="tool" type="button" id="btnSheetClose">닫기</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Supabase 클라이언트 — 세 앱(모바일웹·cloudui·webui)과 «같은 버전·같은 해시».
+     하나만 올리지 마십시오. 해시는 실제 내려받은 파일의 sha384 입니다. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0"
+        integrity="sha384-De+l/Df7qym5QBDVocD3+gW1S7IjR3epf+6KbRDjB3FCCzM/LqVTwqckT6FhFar8"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- 접속값은 저장소 루트 config.js 를 «읽어서만» 씁니다(작성·수정은 🔵손길 담당). -->
+<script src="../config.js"></script>
+<!-- ⭐ 조사 기간·대상 인원·기관 목록 — 팀 공유 화면(t6-status)과 «함께 쓰는» 상수 한 곳.
+     ⛔ 값을 이 HTML 이나 dashboard.js 에 다시 적지 마십시오. 두 화면이 다른 말을 하게 됩니다. -->
+<script src="survey_const.js?v=1"></script>
+<script src="dashboard.js?v=1"></script>
+</body>
+</html>

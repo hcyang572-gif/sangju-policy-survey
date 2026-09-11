@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!-- ⛔ 검색엔진 노출 금지. 이 주소는 «로그인 없이» 열립니다 —
+     카톡이 한 번 전달되면 링크를 가진 누구나 봅니다. 그래서 이 화면에는
+     집계된 숫자만 있고 개별 응답·주관식·접수번호·제출시각 원값이 «없습니다». -->
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; connect-src 'self' https://nalpuhtdruovzulcagtj.supabase.co wss://nalpuhtdruovzulcagtj.supabase.co">
+
+<title>의견조사 접수현황 · 미래상주 희망연구팀</title>
+
+<!-- 카톡에서 링크를 펼쳤을 때 보이는 미리보기. ⚠ 숫자를 적지 않습니다(캐시되어 옛 수치가 돕니다). -->
+<meta property="og:title" content="의견조사 접수현황">
+<meta property="og:description" content="제6기 미래상주 희망연구팀 「톱니바퀴」 관련부서 의견조사 — 접수 현황을 숫자로만 보여드립니다.">
+<meta property="og:type" content="website">
+
+<link rel="stylesheet" href="share.css?v=1">
+</head>
+<body>
+
+<main class="page">
+
+  <header class="hd">
+    <p class="eyebrow">제6기 미래상주 희망연구팀 「톱니바퀴」</p>
+    <h1>의견조사 접수현황</h1>
+    <p class="period" id="period">조사 기간을 불러오는 중…</p>
+    <!-- ⛔ 폴링이면서 「실시간」이라고 적지 않습니다. 문구는 share.js 가 실제 주기로 씁니다. -->
+    <p class="refresh"><span class="dot" id="dot"></span><span id="refreshTxt">불러오는 중…</span></p>
+  </header>
+
+  <!-- 못 불러왔을 때 자리 -->
+  <section class="notice" id="notice" hidden>
+    <b id="noticeT"></b>
+    <p id="noticeP"></p>
+  </section>
+
+  <div id="main" hidden>
+
+    <!-- 큰 숫자 하나 — 320px 에서 가장 먼저 읽히는 것 -->
+    <section class="hero">
+      <p class="hero-lab">지금까지 들어온 응답</p>
+      <p class="hero-n"><strong id="total">–</strong><span class="unit">건</span></p>
+      <div class="rail"><i id="rail"></i></div>
+      <p class="hero-sub"><span id="goalTxt"></span><b id="pct"></b></p>
+    </section>
+
+    <!-- 작은 숫자 셋 -->
+    <section class="tri">
+      <div class="t"><span>오늘</span><strong id="today">–</strong><small>건</small></div>
+      <div class="t"><span>마지막 응답</span><strong id="last">–</strong><small id="lastSub">&nbsp;</small></div>
+      <div class="t"><span>남은 기간</span><strong id="left">–</strong><small id="leftSub">&nbsp;</small></div>
+    </section>
+
+    <!-- 기관별 -->
+    <section class="card">
+      <h2>기관별 응답</h2>
+      <div class="bars" id="bars"></div>
+      <p class="hint" id="barsHint"></p>
+    </section>
+
+    <!-- 척도 평균 -->
+    <section class="card" id="meansCard">
+      <h2>문항 평균 <span class="of">5점 만점</span></h2>
+      <!-- 평균이 아직 없거나(10건 전) 총계와 기준 건수가 다를 때 사실대로 적는 자리 -->
+      <p class="note" id="meansNote" hidden></p>
+      <div class="means" id="means"></div>
+    </section>
+
+  </div>
+
+  <footer class="foot">
+    <p class="lock">응답 하나하나의 내용은 담당자만 볼 수 있습니다.</p>
+    <p class="why">
+      응답해 주신 분들께 「부서 단위 집계로만 인용한다」고 약속드렸기에,
+      이 화면에는 <b>집계된 숫자만</b> 싣습니다. 적어 주신 의견(주관식)과 개별 응답은
+      담당자가 로그인해야만 볼 수 있습니다.<br>
+      응답이 3건이 되지 않는 칸은 <b>「3건 미만」</b>으로만 알려 드립니다 —
+      숫자가 작으면 누가 답했는지 짐작될 수 있기 때문입니다.<br>
+      문항 평균도 같은 까닭으로 <b>응답 10건부터</b>, 그리고 <b>5건 단위로만</b> 갱신됩니다.
+      방금 한 분이 내신 답이 평균의 변화로 드러나지 않게 하기 위해서입니다.
+    </p>
+    <p class="who">상주시청 사회복지과 양호창 ☎ 054-532-7370</p>
+  </footer>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0"
+        integrity="sha384-De+l/Df7qym5QBDVocD3+gW1S7IjR3epf+6KbRDjB3FCCzM/LqVTwqckT6FhFar8"
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="../config.js"></script>
+<!-- ⭐ 조사 기간·대상 인원·기관 목록은 현황/ 화면과 «같은 파일» 을 씁니다.
+     ⛔ 값을 여기에 다시 적지 마십시오 — 두 화면이 다른 숫자를 말하게 됩니다. -->
+<script src="../현황/survey_const.js?v=1"></script>
+<script src="share.js?v=1"></script>
+</body>
+</html>
