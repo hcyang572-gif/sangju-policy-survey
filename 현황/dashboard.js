@@ -56,6 +56,10 @@
     RENDER_MS: 150,         // 눈에는 «즉시» 로 보이는 간격
     RECONCILE_MS: 1200,     // 놓친 이벤트가 없는지 다시 맞춰 보는 간격(공무원앱과 같은 1.2초)
 
+    // 로그인 요청이 이 시간 안에 답하지 않으면 단추를 풀고 까닭을 말합니다.
+    //   ⛔ 이것이 없으면 답 없는 서버 앞에서 화면이 영영 잠깁니다(2026-09-11 실측).
+    LOGIN_TIMEOUT_MS: 15000,
+
     NEW_MS: 90000,          // 「방금 들어왔음」 표시를 유지하는 시간
     FEED_MAX: 300           // 목록에 그리는 최대 줄 수
   };
@@ -270,7 +274,27 @@
     if (!email || !pw) { err.textContent = "이메일과 비밀번호를 모두 입력해 주십시오."; return; }
     var btn = $("loginBtn");
     btn.disabled = true; btn.textContent = "확인하고 있습니다…";
+
+    /* ⛔ 답이 «영영 오지 않는» 경우를 반드시 풀어 주어야 합니다.
+       2026-09-11 실측 — 서버가 답하지 않자 단추가 「확인하고 있습니다…」인 채로
+       13초를 넘겨도 잠겨 있었고, 화면은 까닭을 한 마디도 말하지 않았습니다.
+       행정망 안에서는 Supabase 로 나가는 길이 막히는 일이 실제로 있습니다
+       (메모리 「행정망은 클라우드를 막는다」). 그때 사람이 할 수 있는 일이
+       «새로고침» 밖에 없게 두면 안 됩니다.
+       ⇒ 제한 시간이 지나면 단추를 풀고 까닭을 글자로 말합니다. */
+    var done = false;
+    var late = setTimeout(function () {
+      if (done) return;
+      done = true;
+      btn.disabled = false; btn.textContent = "로그인";
+      err.textContent = "서버가 " + Math.round(CFG.LOGIN_TIMEOUT_MS / 1000) +
+        "초 동안 답하지 않았습니다. 잠시 뒤 다시 눌러 주십시오. " +
+        "(행정망 안에서는 Supabase 접속이 막혀 있을 수 있습니다)";
+    }, CFG.LOGIN_TIMEOUT_MS);
+
     sb.auth.signInWithPassword({ email: email, password: pw }).then(function (r) {
+      if (done) return;                     // 이미 «답이 없다» 고 알린 뒤 뒤늦게 온 답 — 버린다
+      done = true; clearTimeout(late);
       if (r.error) {
         btn.disabled = false; btn.textContent = "로그인";
         var m = String(r.error.message || "");
@@ -284,6 +308,8 @@
       $("pw").value = "";
       enter(r.data.session);
     }).catch(function (e) {
+      if (done) return;
+      done = true; clearTimeout(late);
       btn.disabled = false; btn.textContent = "로그인";
       err.textContent = "서버에 닿지 못했습니다. 행정망에서는 Supabase 접속이 막혀 있을 수 있습니다. (" + (e && e.message) + ")";
     });

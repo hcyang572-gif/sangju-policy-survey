@@ -13,7 +13,17 @@
       두 화면의 KPI·막대·진행률·안내문이 모두 따라 바뀝니다.
       확정되면 아래 잠정 플래그를 false 로 내리십시오 — 화면에서 「(잠정)」 글자가 사라집니다.
    ══════════════════════════════════════════════════════════════════════ */
-window.SURVEY = {
+(function () {
+  "use strict";
+
+  /* ⭐⭐ 조사 기간의 «정본» 은 저장소 루트 config.js 입니다
+       (🔵손길이 window.SURVEY_START · window.SURVEY_END 로 둡니다 — 설문지 화면도 그 값을 씁니다).
+     같은 사실을 두 곳에 적어 두면 반드시 갈라지므로, 여기서는 «받아서 쓰기만» 합니다.
+       · 루트 값이 있으면  → 그 값으로 아래 기간 항목을 «다시 계산» 합니다.
+       · 루트 값이 없으면  → 아래 적어 둔 값을 그대로 씁니다(현황 화면만 따로 열어 볼 때).
+       · 두 값이 다르면    → console 에 경고를 남깁니다. 조용히 어긋나지 않게.
+     ⛔ 이 파일의 기간 값을 «고쳐서» 루트와 다르게 만들지 마십시오. 루트를 고치십시오. */
+  var S = {
   /* ⭐⭐ 조사 기간 — «한국시간(KST) 기준» 입니다 (2026-09-11 양호창님 확정).
        2026-09-11(금) 00:00 KST  ~  2026-09-30(수) 24:00 KST · 20일간
        (개시가 09-14 에서 09-11 로 앞당겨졌습니다)
@@ -65,4 +75,40 @@ window.SURVEY = {
 
   // 총 응답이 이보다 적으면 기관별 분해를 아예 보여주지 않습니다(공유 화면 기준).
   기관별공개하한: 5
-};
+  };
+
+  /* ── 루트 config.js 의 기간을 받아 다시 계산 ─────────────────────────
+     ⚠ 날짜·요일은 «한국시간» 으로 뽑습니다. 보시는 분의 기기 시간대가 어디든
+       한국 날짜가 나와야 합니다(getDate()·toISOString() 을 쓰면 어긋납니다). */
+  function kstDay(d) {
+    try { return d.toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }); }
+    catch (e) { return d.toISOString().slice(0, 10); }
+  }
+  function kstDow(d) {
+    try { return d.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", weekday: "short" }).replace(/[^가-힣]/g, ""); }
+    catch (e) { return ""; }
+  }
+
+  var st = window.SURVEY_START, en = window.SURVEY_END;
+  if (st && en) {
+    var a = new Date(st), b = new Date(en);
+    if (isFinite(a) && isFinite(b) && b > a) {
+      var 시작 = kstDay(a);
+      // 마감ISO 는 «다음 날 00:00» 이므로, 사람이 읽는 마감일은 그 «1분 전» 의 날짜입니다.
+      var 끝 = kstDay(new Date(b.getTime() - 60000));
+      if (시작 !== S.기간시작 || 끝 !== S.기간끝) {
+        console.warn("[설문 상수] 기간이 루트 config.js 와 달라 루트 값으로 맞춥니다 — " +
+                     "이 파일: " + S.기간시작 + "~" + S.기간끝 + " / 루트: " + 시작 + "~" + 끝);
+      }
+      S.기간시작 = 시작;
+      S.기간끝 = 끝;
+      S.시작ISO = st;
+      S.마감ISO = en;
+      S.시작요일 = kstDow(a) || S.시작요일;
+      S.마감요일 = kstDow(new Date(b.getTime() - 60000)) || S.마감요일;
+      S.총일수 = Math.round((b.getTime() - a.getTime()) / 86400000);
+    }
+  }
+
+  window.SURVEY = S;
+})();
