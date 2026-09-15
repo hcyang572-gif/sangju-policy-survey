@@ -43,6 +43,32 @@
      ⛔ 다른 표·뷰·함수를 부르지 마십시오. anon 에게 열린 곳은 여기 하나뿐입니다. */
   var TABLE = "survey_public_stats";
 
+  /* ── 주관식 공개 표 (🩷자물쇠 확정 · anon 에 SELECT 만 열려 있습니다) ──
+     칼럼은 이 넷뿐입니다 — pub_key(행 식별자) · qno(22 또는 23) · ord(정렬키) · body(본문).
+     ⛔ 시각·제출순 칼럼이 «아예 없습니다». 일부러 없앤 것이니
+        「언제 들어왔는지」를 적으려 들지 마십시오 — 적을 자료가 없습니다.
+     ⛔ ord 는 «화면에 보이는 번호가 아닙니다». 번호를 매기려면 보이는 순서대로 1,2,3.
+     ⛔ 새 Realtime 구독을 만들지 마십시오. 갱신 신호는 위 TABLE 의 UPDATE 하나로 받고,
+        받으면 집계 한 줄과 이 목록을 «함께» 다시 읽습니다(loadOpinions 를 같이 부릅니다). */
+  var OPINIONS = "survey_public_opinions";
+
+  /* 주관식 문항 이름표 — 원문은 ../app.js 의 문22·문23 정의입니다. 바뀌면 함께 고치십시오. */
+  var OPQ = [
+    { qno: 22, t: "추가·개선되었으면 하는 기능, 공고·홍보에 바라시는 점" },
+    { qno: 23, t: "그 밖에 하고 싶은 말씀" }
+  ];
+
+  /* ⭐ 글자가 하나도 없는 답변(「.」·「-」·공백뿐)은 싣지 않습니다.
+     「없음」·「좋아요」처럼 «짧아도 글자로 적은 것» 은 뜻을 담아 낸 답이므로 그대로 싣습니다
+     (양호창님 2026-09-15 : 「.만 있는 건 걸러줘」 — 이 선을 넘지 마십시오).
+     ⚠ 공개 표가 이미 걸러 주더라도 화면에서 한 번 더 봅니다 — 규칙이 한쪽만 바뀌어도
+       「.」 한 줄이 팀 화면에 뜨는 일이 없게 하려는 것입니다. */
+  /* ⚠ ㅡ(U+3161, 가운뎃점 모음 하나만 있는 자모)는 화면에서 "-" 와 구별이 안 되고
+     실제로도 "ㅡㅡ"(무표정) 처럼 뜻 없는 필러로 쓰입니다 — 범위에서 뺍니다.
+     [검수 2026-09-15] ㄱ-ㆎ 전체를 넣으면 "ㅡㅡ" 가 «글자 있음» 으로 잘못 판정되어
+     그려지는 결함이 있었습니다(node 로 실측: HAS_LETTER.test("ㅡㅡ") === true). */
+  var HAS_LETTER = /[0-9A-Za-z가-힣ㄱ-ㅠㅢ-ㆎ]/;
+
   /* 실시간이 «끊겼을 때만» 도는 폴백 주기.
      ⭐ 화면 문구는 이 값에서 만들어 씁니다 — 손으로 적지 마십시오. */
   var POLL_MS = 30000;
@@ -115,6 +141,11 @@
   var pollTimer = null, rtTimer = null, watchdog = null;
   var everOk = false, busy = false;
 
+  /* 주관식은 «집계와 따로» 셉니다 — 한쪽이 실패해도 다른 쪽은 그려지게 하려는 것입니다. */
+  var opBusy = false, opEverOk = false;
+  var opOpen = Object.create(null);   // 펼쳐 둔 답변(pub_key) — 다시 그려도 펼친 채로 둡니다
+  var opResizeTimer = null;
+
   function confVal(a, b) { if (typeof a !== "undefined" && a) return a; return b || null; }
 
   function boot() {
@@ -179,8 +210,12 @@
             function (payload) {
               var row = payload && (payload.new || payload.record);
               // replica identity full 이라 payload 에 «행 전체» 가 실려 옵니다 — 다시 조회할 필요가 없습니다.
-              if (row && row.total_n !== undefined && row.total_n !== null) paint(normalize(row));
-              else load();
+              // ⭐ 이 신호 하나로 «집계 한 줄 + 주관식 목록» 을 함께 맞춥니다.
+              //    주관식에 별도 구독을 걸지 않는 까닭이 이것입니다.
+              if (row && row.total_n !== undefined && row.total_n !== null) {
+                paint(normalize(row));
+                loadOpinions();
+              } else load();
             })
         .subscribe(function (status, err) {
           if (gen !== rtGen) return;                  // 옛 채널의 뒷북 — 버린다
@@ -236,6 +271,8 @@
 
   /* ── 불러오기 ─────────────────────────────────────────────────── */
   function load() {
+    // ⭐ 주관식을 먼저, 그리고 «따로» 읽습니다. 집계가 busy 여도 주관식은 갱신됩니다.
+    loadOpinions();
     if (!sb || busy) return;
     busy = true;
     // ⛔ survey_responses 가 아니라 «집계 표 한 줄» 입니다.
@@ -450,5 +487,146 @@
     });
   }
 
+  /* ══════════════════════════════════════════════════════════════════
+     [적어 주신 의견] 주관식 문22·문23
+     ⭐⭐ 집계와 «완전히 따로» 돕니다. 이 함수가 실패해도 위 숫자는 그대로 남습니다.
+     ⛔ 본문은 textContent 로만 넣습니다. innerHTML 금지,
+        URL 자동링크 금지 — 로그인 없는 공개 화면에서 스크립트·피싱 경로가 됩니다.
+     ⛔ 「새 의견 도착」 배지·하이라이트·토스트를 넣지 마십시오.
+        현황/ 화면의 NEW 칩을 흉내내면 안 됩니다 — 그쪽은 로그인 화면입니다.
+     ══════════════════════════════════════════════════════════════════ */
+  function loadOpinions() {
+    if (!sb || opBusy) return;
+    opBusy = true;
+    // ⛔ survey_responses 가 아닙니다. anon 에 열린 주관식 표는 여기 하나뿐입니다.
+    sb.from(OPINIONS).select("pub_key,qno,ord,body").order("ord", { ascending: true })
+      .then(function (res) {
+        opBusy = false;
+        if (res.error) { onOpinionError(res.error); return; }
+        opEverOk = true;
+        drawOpinions(res.data || []);
+      })
+      .catch(function (e) { opBusy = false; onOpinionError(e); });
+  }
+
+  /* 표가 아직 없거나(양호창님이 SQL 을 실행하기 전) 조회가 실패했을 때.
+     ⭐ 첫 배포 직후의 «실제» 상태가 이것입니다 — 반쯤 만들어진 자리를 보이지 않고 조용히 숨깁니다.
+     ⭐ 한 번이라도 보여 준 뒤라면 지우지 않습니다. 연결이 이상하다는 말은 머리의 알림이 이미 합니다. */
+  function onOpinionError(err) {
+    console.warn("[접수현황] 주관식을 불러오지 못했습니다", err);
+    if (opEverOk) return;
+    $("opCard").hidden = true;
+  }
+
+  function drawOpinions(rows) {
+    var card = $("opCard"), box = $("opBody"), note = $("opNote");
+
+    /* 걸러내기 + 문항별로 나누기. ord 순서는 서버가 준 대로 씁니다(제출순이 아닙니다). */
+    var bucket = { 22: [], 23: [] };
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i] || {};
+      var body = (r.body === null || r.body === undefined) ? "" : String(r.body);
+      if (!HAS_LETTER.test(body)) continue;              // 글자 없는 답변은 싣지 않습니다
+      var q = num(r.qno);
+      if (q !== 22 && q !== 23) continue;                // 모르는 문항은 그리지 않습니다
+      bucket[q].push({
+        key: String(r.pub_key || (q + "#" + i)),
+        body: body
+      });
+    }
+
+    clear(box);
+    var n22 = bucket[22].length, n23 = bucket[23].length;
+    $("opCount").textContent = "문22 " + n22 + "건 · 문23 " + n23 + "건";
+    card.hidden = false;
+
+    if (!n22 && !n23) {
+      note.textContent = "아직 적어 주신 의견이 없습니다. 짧게 한 줄이어도 큰 도움이 됩니다.";
+      note.hidden = false;
+      return;
+    }
+    note.hidden = true;
+
+    OPQ.forEach(function (q) {
+      var list = bucket[q.qno];
+      if (!list.length) return;                          // 빈 묶음은 제목도 만들지 않습니다
+      var grp = el("div", "opgrp");
+      var h = el("h3", null, q.t);
+      h.appendChild(el("span", "c", list.length + "건"));
+      grp.appendChild(h);
+      var ul = el("div", "oplist");
+      list.forEach(function (o) { ul.appendChild(opCard(o)); });
+      grp.appendChild(ul);
+      box.appendChild(grp);
+    });
+
+    applyClamps();
+  }
+
+  function opCard(o) {
+    var text = o.body;
+    var len = text.replace(/\s+/g, " ").trim().length;
+    var card = el("article", "op" + (len <= 10 ? " short" : ""));
+    // ⛔ [검수 2026-09-15] pub_key 를 data-* 속성으로 두면 view-source/outerHTML 에
+    //    그대로 찍혀 「DOM 에 사람이 읽을 수 있게」 나옵니다 — 일반 프로퍼티로만 둡니다.
+    card.opKey = o.key;
+
+    var p = el("p", "op-body", text);                    // ⭐ textContent — el() 이 그렇게 넣습니다
+    card.appendChild(p);
+
+    var btn = el("button", "op-more", "더 보기");
+    btn.type = "button";
+    btn.hidden = true;                                   // 접을 만큼 길 때만 켭니다(applyClamps)
+    btn.addEventListener("click", function () {
+      var k = card.opKey;
+      opOpen[k] = !opOpen[k];
+      applyOne(card);
+    });
+    card.appendChild(btn);
+
+    var lenP = el("p", "op-len", "이 답변 " + len + "자");
+    lenP.hidden = true;
+    card.appendChild(lenP);
+    return card;
+  }
+
+  /* 접기 판정 — «글자 수로 어림잡지 않고» 실제로 넘쳤는지 봅니다.
+     4줄(359px 아래 5줄)은 CSS 가 정하므로, 폭이 달라지면 판정도 저절로 달라집니다. */
+  function applyOne(card) {
+    var p = card.querySelector(".op-body");
+    var btn = card.querySelector(".op-more");
+    var lenP = card.querySelector(".op-len");
+    if (!p || !btn) return;
+    var open = !!opOpen[card.opKey];
+
+    p.classList.add("clip");
+    var over = p.scrollHeight > p.clientHeight + 2;
+    if (!over) {                                         // 4줄 안에 들어오는 답 — 단추가 필요 없습니다
+      p.classList.remove("clip");
+      btn.hidden = true;
+      if (lenP) lenP.hidden = true;
+      return;
+    }
+    btn.hidden = false;
+    if (lenP) lenP.hidden = false;
+    if (open) p.classList.remove("clip");
+    btn.textContent = open ? "접기" : "더 보기";
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function applyClamps() {
+    var cards = $("opBody").querySelectorAll(".op");
+    for (var i = 0; i < cards.length; i++) applyOne(cards[i]);
+  }
+
   boot();
+
+  /* 가로로 돌리거나 창을 줄이면 «몇 줄인지» 가 달라집니다 — 판정을 다시 합니다.
+     ⭐ 다시 그리지 않으므로 펼쳐 둔 답변과 스크롤 위치가 그대로 남습니다. */
+  window.addEventListener("resize", function () {
+    clearTimeout(opResizeTimer);
+    opResizeTimer = setTimeout(function () {
+      if (!$("opCard").hidden) applyClamps();
+    }, 200);
+  });
 })();

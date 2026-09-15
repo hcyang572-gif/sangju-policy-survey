@@ -6,7 +6,10 @@
 
 <!-- ⛔ 검색엔진 노출 금지. 이 주소는 «로그인 없이» 열립니다 —
      카톡이 한 번 전달되면 링크를 가진 누구나 봅니다. 그래서 이 화면에는
-     집계된 숫자만 있고 개별 응답·주관식·접수번호·제출시각 원값이 «없습니다». -->
+     집계된 숫자와 «주관식 본문» 만 있고, 개별 응답(문항별 답)·소속·담당 업무·경력·
+     접수번호·제출시각 원값이 «없습니다».
+     ⭐ 주관식은 survey_public_opinions 에서 읽습니다 — 그 표에는 시각·제출순 칼럼이
+        아예 없으므로 「언제 들어왔는지」를 적을 방법이 없습니다(일부러 없앤 것입니다). -->
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="googlebot" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
@@ -17,10 +20,10 @@
 
 <!-- 카톡에서 링크를 펼쳤을 때 보이는 미리보기. ⚠ 숫자를 적지 않습니다(캐시되어 옛 수치가 돕니다). -->
 <meta property="og:title" content="의견조사 접수현황">
-<meta property="og:description" content="제6기 미래상주 희망연구팀 「톱니바퀴」 관련부서 의견조사 — 접수 현황을 숫자로만 보여드립니다.">
+<meta property="og:description" content="제6기 미래상주 희망연구팀 「톱니바퀴」 관련부서 의견조사 — 접수 현황과 적어 주신 의견을 보여드립니다.">
 <meta property="og:type" content="website">
 
-<link rel="stylesheet" href="share.css?v=1">
+<link rel="stylesheet" href="share.css?v=260915b">
 </head>
 <body>
 
@@ -72,14 +75,30 @@
       <div class="means" id="means"></div>
     </section>
 
+    <!-- 적어 주신 의견(주관식) — 문항 평균 «아래» 자리입니다.
+         ⭐⭐ 집계와 «따로» 읽습니다. 이 카드를 못 채워도 위 숫자는 그대로 그려지고,
+              반대로 숫자를 못 읽으면 #main 이 통째로 숨으므로 이 카드도 함께 숨습니다.
+         ⭐ 표가 아직 없으면(양호창님이 SQL 을 실행하기 전) 이 카드는 «조용히 숨습니다» —
+            반쯤 만들어진 자리를 팀원에게 보이지 않기 위해서입니다. 첫 배포 직후가 이 상태입니다.
+         ⛔ 「새 의견 도착」 배지·하이라이트·토스트를 넣지 마십시오. 로그인 없는 화면에서
+            «방금 들어온 한 줄» 을 짚어 주면 누가 방금 냈는지 좁혀집니다.
+         ⛔ 제출시각·접수번호·순번을 적지 마십시오. 공개 표에 그 칼럼이 아예 없습니다. -->
+    <section class="card" id="opCard" hidden>
+      <h2>적어 주신 의견 <span class="of" id="opCount"></span></h2>
+      <p class="note" id="opNote" hidden></p>
+      <div id="opBody"></div>
+    </section>
+
   </div>
 
   <footer class="foot">
-    <p class="lock">응답 하나하나의 내용은 담당자만 볼 수 있습니다.</p>
+    <p class="lock">적어 주신 의견은 본문만 싣습니다.</p>
     <p class="why">
-      응답해 주신 분들께 「부서 단위 집계로만 인용한다」고 약속드렸기에,
-      이 화면에는 <b>집계된 숫자만</b> 싣습니다. 적어 주신 의견(주관식)과 개별 응답은
-      담당자가 로그인해야만 볼 수 있습니다.<br>
+      응답해 주신 분들께 「부서 단위 집계로만 인용한다」고 약속드렸기에, 숫자는
+      <b>집계된 것만</b> 싣습니다. 적어 주신 의견은 <b>본문만</b> 싣고,
+      <b>소속·담당 업무·경력·접수번호·제출시각은 이 화면에 없습니다.</b>
+      개별 응답 전체와 문항별 답은 담당자가 로그인해야만 볼 수 있습니다.<br>
+      글자가 없는 답변(「.」 등)은 싣지 않습니다 — 그래서 의견 건수는 전체 응답 수와 다릅니다.<br>
       응답이 3건이 되지 않는 칸은 <b>「3건 미만」</b>으로만 알려 드립니다 —
       숫자가 작으면 누가 답했는지 짐작될 수 있기 때문입니다.<br>
       문항 평균도 같은 까닭으로 <b>응답 10건부터</b>, 그리고 <b>5건 단위로만</b> 갱신됩니다.
@@ -96,7 +115,7 @@
 <script src="../config.js"></script>
 <!-- ⭐ 조사 기간·대상 인원·기관 목록은 현황/ 화면과 «같은 파일» 을 씁니다.
      ⛔ 값을 여기에 다시 적지 마십시오 — 두 화면이 다른 숫자를 말하게 됩니다. -->
-<script src="../현황/survey_const.js?v=260915"></script>
-<script src="share.js?v=260915"></script>
+<script src="../현황/survey_const.js?v=260915b"></script>
+<script src="share.js?v=260915b"></script>
 </body>
 </html>
