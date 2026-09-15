@@ -93,7 +93,9 @@
     <div id="dashMain" hidden>
       <div class="kpis">
         <div class="kpi hot">
-          <span>총 응답</span><strong id="kTotal">0</strong><small id="kTotalSub">목표 54건(잠정)</small>
+          <!-- ⚠ 이 값은 dashboard.js 가 곧 S.GOAL 로 덮어씁니다. 첫 렌더에 스쳐 보이므로
+               survey_const.js 의 GOAL 을 바꾸면 여기도 같이 맞춰 주십시오. -->
+          <span>총 응답</span><strong id="kTotal">0</strong><small id="kTotalSub">목표 163건</small>
           <div class="kpi-rail"><i id="kRail"></i></div>
         </div>
         <div class="kpi"><span>오늘 들어온 응답</span><strong id="kToday">0</strong><small id="kTodaySub">어제 0건</small></div>
@@ -110,8 +112,10 @@
             그래서 <b>3건 미만인 칸은 「3건 미만」으로 뭉뚱그려</b> 보여 드립니다(막대 길이도 감춥니다).
             읍·면·동은 한 곳에 사회복지 담당이 한두 명뿐이라 <b>어느 읍·면·동인지는 묻지도, 보여 드리지도 않고</b>
             읍·면·동 전체를 한 덩어리로만 셉니다. 보고서·발표자료에 실으실 때도 이 원칙을 그대로 지켜 주십시오.<br>
-            ※ 대상 인원(사회복지과 12 · 노인장애인복지과 10 · 아이여성행복과 8 · 읍·면·동 24 = 54명)은
-            <b>잠정치</b>입니다. 확정되면 <code>현황/dashboard.js</code> 맨 위 <code>CFG</code> 한 곳만 고치시면 됩니다.
+            ※ 조사 대상 인원은 <b>163명(확정)</b>입니다. <b>부서별 내역은 표기하지 않습니다</b> —
+            막대는 「응답 수」만 보여 드립니다. 대상 인원을 바꾸실 때는
+            <code>현황/survey_const.js</code> 의 <code>GOAL</code> 한 곳만 고치시면
+            두 화면(현황 · 팀 공유)이 함께 따라 바뀝니다.
           </p>
         </div>
         <div class="card">
@@ -165,7 +169,7 @@
 <script src="../config.js"></script>
 <!-- ⭐ 조사 기간·대상 인원·기관 목록 — 팀 공유 화면(t6-status)과 «함께 쓰는» 상수 한 곳.
      ⛔ 값을 이 HTML 이나 dashboard.js 에 다시 적지 마십시오. 두 화면이 다른 말을 하게 됩니다. -->
-<script src="survey_const.js?v=1"></script>
-<script src="dashboard.js?v=1"></script>
+<script src="survey_const.js?v=260915"></script>
+<script src="dashboard.js?v=260915"></script>
 </body>
 </html>

@@ -362,14 +362,24 @@
     }
 
     // 줄 순서는 상수 파일이 정합니다(서버가 주는 순서에 휘둘리지 않게).
+    /* 막대 길이의 기준 — 부서별 대상 인원을 표기하지 않으므로(target 전부 0 · 2026-09-15)
+       실제로는 «응답이 가장 많은 칸» 이 기준입니다. target 을 다시 채우면 그 값이 기준으로
+       되살아나므로 max 에 남겨 둡니다. 최소 1 — 0 으로 나누지 않게. */
     var base = 1, masked = 0;
     S.기관.forEach(function (o) { base = Math.max(base, o.target || 0); });
     v.orgs.forEach(function (o) { if (o.n !== null) base = Math.max(base, o.n); });
+    /* ⚠ 가려진 칸(n === null)도 「3건 미만」 길이로 그리므로, 기준이 최소공개건수보다
+       작으면 막대가 100% 를 넘습니다. 응답이 아주 적은 초기에 생기는 일입니다. */
+    base = Math.max(base, S.최소공개건수);
 
     S.기관.forEach(function (org, i) {
       var found = null;
       for (var k = 0; k < v.orgs.length; k++) if (v.orgs[k].name === org.name) { found = v.orgs[k]; break; }
-      if (!found && !org.target) return;            // 응답도 대상도 없는 「그 밖의 부서」는 숨긴다
+      /* 응답이 없는 「그 밖의 부서」는 숨긴다.
+         ⛔ !org.target 으로 판정하지 않는다 — target 이 전부 0 이라(2026-09-15) 그 조건은
+           응답 0건인 「정식 기관」까지 통째로 숨겨 버린다. 현황/dashboard.js 와 같은 규칙으로
+           「목록 마지막 칸」만 본다(deptIndex 가 모르는 소속을 모으는 자리). */
+      if (!found && i === S.기관.length - 1) return;
 
       var n = found ? found.n : 0;                  // 목록에 없으면 0건
       var hide = !!found && n === null;             // ⭐ null = 서버가 「3건 미만」이라 가린 것
